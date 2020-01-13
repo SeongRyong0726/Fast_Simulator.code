@@ -3,6 +3,6 @@ START
 # Python Leaning
 ## 1. tensor flow
  > first
- > second
- > third
+ >> second
+ >>> third
 ## 2. PySpice
