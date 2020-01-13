@@ -4,5 +4,5 @@ START
 ## 1. tensor flow
  > first
  >> second
- >>> third
+ >>> third.
 ## 2. PySpice
