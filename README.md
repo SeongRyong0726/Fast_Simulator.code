@@ -61,41 +61,41 @@ init
         
 methods
 -------
-# Update next "num_fold (col, row)" & "num_use (col, row)"
-### update_fold_variable_B_WS(self)
-### update_fold_variable_F_WS(self)
-> ### update_colrow_use_variable(self)
+## Update next "num_fold (col, row)" & "num_use (col, row)"
+#### update_fold_variable_B_WS(self)
+#### update_fold_variable_F_WS(self)
+> #### update_colrow_use_variable(self)
 
-# flow of operand, result of each fMAC
-### separate_exp_man(self, tuple)
-### fMAC_operand_pass_right(self, row_num=0, col_num=0)
-### fMAC_operand_pass_up(self, row_num=0, col_num=0)
-### fMAC_result_pass_right(self, row_num=0, col_num=0)
-### fMAC_result_pass_up(self, row_num=0, col_num=0):
+## flow of operand, result of each fMAC
+#### separate_exp_man(self, tuple)
+#### fMAC_operand_pass_right(self, row_num=0, col_num=0)
+#### fMAC_operand_pass_up(self, row_num=0, col_num=0)
+#### fMAC_result_pass_right(self, row_num=0, col_num=0)
+#### fMAC_result_pass_up(self, row_num=0, col_num=0):
 
-# '1 cycle' Calculation
-### Systolic_Array_1cycle_calculation(self)
+## '1 cycle' Calculation
+#### Systolic_Array_1cycle_calculation(self)
 
-# Output stationary
-### 1. Backward_OS_Calculation(self)
-#### Do calculation + store for all folds (iter Unit = one pair of fold)
-> ### a. Systolic_Backward_OS_one_folds(self)
-> ### b. store_OS_result(self)
+## Output stationary
+#### 1. Backward_OS_Calculation(self)
+##### Do calculation + store for all folds (iter Unit = one pair of fold)
+> #### a. Systolic_Backward_OS_one_folds(self)
+> #### b. store_OS_result(self)
 
-# Weight Stationary
-### 1. Systolic_preload_Weight(self)
-> ### preload_Weight_row_by_row(self, row_num, col_num) (for 1 FMAC)
+## Weight Stationary
+#### 1. Systolic_preload_Weight(self)
+> #### preload_Weight_row_by_row(self, row_num, col_num) (for 1 FMAC)
 
-## Weight stationary(Forward)
-### 1. Forward_WS_Calculation(self)
-> ### a. Systolic_Forward_WS_one_folds(self)
-> ### b. make_square_Forward_WS_result(self)
-> ### c. store_Forward_WS_result(self)
+### Weight stationary(Forward)
+#### 1. Forward_WS_Calculation(self)
+> #### a. Systolic_Forward_WS_one_folds(self)
+> #### b. make_square_Forward_WS_result(self)
+> #### c. store_Forward_WS_result(self)
 
 
-## Weight stationary(Backward)
-### 1. Forward_WS_Calculation(self)
-> ### a. Systolic_Backward_WS_one_folds(self)
-> ### b. make_square_Backward_WS_result(self)
-> ### c. store_Backward_WS_result(self)
+### Weight stationary(Backward)
+#### 1. Forward_WS_Calculation(self)
+> #### a. Systolic_Backward_WS_one_folds(self)
+> #### b. make_square_Backward_WS_result(self)
+> #### c. store_Backward_WS_result(self)
 
