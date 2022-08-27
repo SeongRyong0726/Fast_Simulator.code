@@ -16,23 +16,23 @@ Fast_simulator.code
 Test
 ====
 #### functions.py에 들어가서 각각의 TEST를 진행하면서 기능을 확인 할 수 있다.
-######    Functions.py TEST1
-######    Check fold, use value.!
+######    1. Functions.py TEST1
+######    ==> Check fold, use value.!
 
-######    Functions.py TEST2
-######    Check separate exp, mantissa (sram --> fmac)
+######    2. Functions.py TEST2
+######    ==> Check separate exp, mantissa (sram --> fmac)
 
-######    Functions.py TEST3
-######    Check Data_flow
+######    3. Functions.py TEST3
+######    ==> Check Data_flow
 
-######    Functions.py TEST4
-######    Check Forward WS  //TO_DO//
+######    4. Functions.py TEST4
+######    ==> Check Forward WS  //TO_DO//
 
-######    Functions.py TEST5
-######    Check Backward WS  //TO_DO//
+######    5. Functions.py TEST5
+######    ==> Check Backward WS  //TO_DO//
 
-######    Functions.py TEST6
-######    Check BackWard OS  //TO_DO//
+######    6. Functions.py TEST6
+######    ==> Check BackWard OS  //TO_DO//
 
 
 
