@@ -12,6 +12,30 @@ Fast_simulator.code
 > ###### Backward OS = Activation_T(+padding) --> precision_decision <A_T, G_O> --(im2col)--> Systolic_Class(시뮬레이션) --> 결과(Gradient_Weight)
 
 
+
+Test
+====
+#### functions.py에 들어가서 각각의 TEST를 진행하면서 기능을 확인 할 수 있다.
+######    Functions.py TEST1
+######    Check fold, use value.!
+
+######    Functions.py TEST2
+######    Check separate exp, mantissa (sram --> fmac)
+
+######    Functions.py TEST3
+######    Check Data_flow
+
+######    Functions.py TEST4
+######    Check Forward WS  //TO_DO//
+
+######    Functions.py TEST5
+######    Check Backward WS  //TO_DO//
+
+######    Functions.py TEST6
+######    Check BackWard OS  //TO_DO//
+
+
+
 Class "fMAC"
 ======================
 ###### 기본적인 fMAC의 동작을 수행, 값을 저장하는 레지스터를 변수로 + 값을 연산하고 flow시키는 동작을 수행.
@@ -40,7 +64,7 @@ methods
 >#### load_result_on_acc(self, result)
 #### operation
 >#### operation(self)
->#### fp_generator(self, exp, mantissa) $$$$미완성 
+>#### fp_generator(self, exp, mantissa)  //TO_DO//
 
 
 Class "Systolic-array"
@@ -52,7 +76,7 @@ init
 >#### self.group_size                   {type:int}
 >#### self.dim_row, self.dim_col        {type:int, int}
 >#### self.Unit                         {type:Class}
->#### self.Unit_array                   {type:}
+>#### self.Unit_array                   {type:list}
 >#### self.Data_SRAM                    {type:numpy array (width(row), hight(col), groupsize + 1)}   
 >#### self.Weight_SRAM                  {type:numpy array (width(row), hight(col), groupsize + 1)} 
 >>#### self.bottom_side_entrance @load  {type:numpy array (width(row), 1, groupsize + 1)}
