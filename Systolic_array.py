@@ -12,7 +12,7 @@ class Systolic_array():
         self.dim_row = dim_row
         self.dim_col = dim_col
         self.Unit = opUnit
-        self.Unit_array  = []
+        self.Unit_array = list()
             ####    SRAM
         self.Data_SRAM = Input_A                ##numpy
         self.Weight_SRAM = Input_W              ##numpy
@@ -26,8 +26,8 @@ class Systolic_array():
         #### fold
         self.col_total = col_total          
         self.row_total = row_total
-        self.col_fold_end = math.celi(self.col_total/dim_col)
-        self.row_fold_end = math.celi(self.row_total/dim_row)
+        self.col_fold_end = math.ceil(self.col_total/dim_col)
+        self.row_fold_end = math.ceil(self.row_total/dim_row)
         self.col_fold_current = 0
         self.row_fold_current = 0
         ####    Process Variable
@@ -49,15 +49,16 @@ class Systolic_array():
     
 
         ####    Array에 Unit(fMAC)을 채우고 초기화 // 가로(cols) 세로(rows)
-        for i in range (dim_row):
-            self.Unit_array([])
-            for j in range (dim_col):
+        for i in range (self.dim_row):
+            self.Unit_array.append(list())
+            for j in range (self.dim_col):
                 self.Unit_array[i].append(opUnit(i, j, groupsize, mode))
 
 
 ####_______________________________________________________________________________________________________________________________________
 #### Function: Function :   update next_fold, next row,col_use, Use when finishing every fold (n*folds = entire caculation)
 ####               변수  :  현제 row,col_fold / 총 row,col_fold 
+####    Functions.py TEST1
 ####_______________________________________________________________________________________________________________________________________
 
     def update_colrow_use_variable(self):
@@ -106,49 +107,43 @@ class Systolic_array():
 ####              SRAM-->fMAC(operand)
 ####              fMAC-->fMAC(operand/result)
 ####              fMAC-->SRAM(result)
+####     Function.py TEST2
 ####_______________________________________________________________________________________________________________________________________
 
-    def separate_exp_man(self, tuple):
+    def separate_exp_man(self, list):
         ####  bottom_side_entrace에는 tuple exp_up, mantissa는 numpy ####
-        exp = np.array(tuple[0])
-        
+        exp = np.array(list[0])
+        mantissa = np.full((self.group_size,), 0)
         for i in range (self.group_size):
-            mantissa = np.insert(mantissa, i , tuple[i+1])
+            mantissa[i] = list[i+1]
+            #mantissa = np.insert(mantissa, i , list[i+1])
         return exp, mantissa ## numpy리턴
 
     def fMAC_operand_pass_right(self, row_num=0, col_num=0):                                        #operand
-        if row_num>=0 and row_num<=self.dim_row-1       and col_num > 0 and col_num<self.dim_col-1:  #case) fMAC-->fMAC  
+        if row_num>=0 and row_num<=self.dim_row-1       and col_num > 0 and col_num<self.dim_col:  #case) fMAC-->fMAC  
             exp_left, mantissa_left = self.Unit_array[row_num][col_num-1].get_operand_from_left()    #이전꺼에서 받아서 넣는다
             self.Unit_array[row_num][col_num].load_operand_on_left_entrance(exp_left, mantissa_left)
         elif row_num>=0 and row_num<=self.dim_row-1     and col_num==0:                              #case) SRAM-->fMAC (load)  
             exp_up, mantissa_up = self.separate_exp_man(self.left_side_entrance[row_num])
             self.Unit_array[row_num][col_num].load_operand_on_left_entrance(exp_up, mantissa_up)                                                                                 
-        elif row_num>=0 and row_num<=self.dim_row-1     and col_num==self.dim_col-1:                 #case) fMAC-->SRAM (store)
-            ####  XXXX  ####
-            a=1
         else:
             print("error: function 'fMAC_operand_pass_right'")
 
     def fMAC_operand_pass_up(self, row_num=0, col_num=0):                                         #operand
-        if row_num>0 and row_num<self.dim_row-1 and col_num >= 0 and col_num<=self.dim_col-1:          #case) fMAC-->fMAC  
+        if row_num>0 and row_num<self.dim_row and col_num >= 0 and col_num<=self.dim_col-1:          #case) fMAC-->fMAC  
             exp_up, mantissa_up = self.Unit_array[row_num-1][col_num].get_operand_from_down()
             self.Unit_array[row_num][col_num].load_operand_on_down_entrance(exp_up, mantissa_up)
         elif row_num==0                         and col_num >= 0 and col_num<=self.dim_col-1:        #case) SRAM-->fMAC (load)
             exp_up, mantissa_up = self.separate_exp_man(self.bottom_side_entrance[col_num])
             self.Unit_array[row_num][col_num].load_operand_on_down_entrance(exp_up, mantissa_up)                                                                                   
-        elif row_num==self.dim_row-1            and col_num >= 0 and col_num<=self.dim_col-1:        #case) fMAC-->SRAM (store)
-            ####  XXXX  ####                                                                      
-            a=1
+
         else:
             print("error: function 'fMAC_operand_pass_up'")
 
     def fMAC_result_pass_right(self, row_num=0, col_num=0):                                         #result (부분합)
-        if row_num>=0 and row_num<=self.dim_row-1   and col_num > 0 and col_num<self.dim_col-1:          #case) fMAC-->fMAC  
+        if row_num>=0 and row_num<=self.dim_row-1   and col_num >= 0 and col_num<self.dim_col-1:          #case) fMAC-->fMAC  
             result = self.Unit_array[row_num][col_num-1].get_result_to_right()
             self.Unit_array[row_num][col_num].load_result_on_acc(result)
-        elif row_num>=0 and row_num<=self.dim_row-1 and col_num==0:                                    #case) SRAM-->fMAC (load)  
-            ####  XXXX  ####
-            a=1
         elif row_num>=0 and row_num<=self.dim_row-1 and col_num==self.dim_col-1:                       #case) SRAM직전 fMAC-->SRAM
             ####  TO DO ####                                                                        # SRAM에 값 넣기 SRAM의 base addr//진행에 따라 시작점이 다르므로 pointer를 지정해야하마
             self.right_side_entrance[row_num] = self.Unit_array[row_num][col_num].get_result_to_right()
@@ -156,12 +151,9 @@ class Systolic_array():
             print("error: function 'fMAC_result_pass_right'")
 
     def fMAC_result_pass_up(self, row_num=0, col_num=0):
-        if row_num>0 and row_num<self.dim_row-1 and col_num >= 0 and col_num<=self.dim_col-1:       #case) fMAC-->fMAC  
+        if row_num>=0 and row_num<self.dim_row-1 and col_num >= 0 and col_num<=self.dim_col-1:       #case) fMAC-->fMAC  
             result = self.Unit_array[row_num-1][col_num].get_result_to_up()
             self.Unit_array[row_num][col_num].load_result_on_acc(result)
-        elif row_num==0                         and col_num >= 0 and col_num<=self.dim_col-1:       #case) SRAM-->fMAC (load)
-            ####  XXXX  ####
-            a=1
         elif row_num==self.dim_row-1            and col_num >= 0 and col_num<=self.dim_col-1:       #case) SRAM직전 fMAC-->SRAM
             ####  TO DO ####                                                                        # SRAM에 값 넣기
             self.up_side_entrance[col_num] = self.Unit_array[row_num][col_num].get_result_to_up()
@@ -171,6 +163,7 @@ class Systolic_array():
 
 ####_______________________________________________________________________________________________________________________________________
 #### Function: Systolic_Array_1cycle_calculation 함수를 사용하면 1cycle에 걸친 Systolic Array 내부의 동작을 수행한다.
+#### Functions.py TEST3
 ####_______________________________________________________________________________________________________________________________________
 
     def Systolic_Array_1cycle_calculation(self):
@@ -182,36 +175,39 @@ class Systolic_array():
         for i in range(self.dim_row):
             for j in range(self.dim_col):
                 if(self.mode == "Backward_OS"):
-                    self.fMAC_operand_pass_right(i,j)
-                    self.fMAC_operand_pass_up(i,j)
+                    self.fMAC_operand_pass_right(self.dim_row - i -1,self.dim_col - j -1)
+                    self.fMAC_operand_pass_up(self.dim_row - i-1,self.dim_col - j-1)
                 # WS type은 result_pass 함수에서 결과를 SRAM으로 넣어준다.
                 elif(self.mode == "Forward_WS"):
-                    self.fMAC_operand_pass_up(i,j)
-                    self.fMAC_result_pass_right(i,j)
+                    self.fMAC_operand_pass_up(self.dim_row - i-1,self.dim_col - j-1)
+                    self.fMAC_result_pass_right(self.dim_row - i-1,self.dim_col - j-1)
                 elif(self.mode == "Backward_WS"):
-                    self.fMAC_operand_pass_right(i,j)
-                    self.fMAC_result_pass_up(i,j)
+                    self.fMAC_operand_pass_right(self.dim_row - i-1,self.dim_col - j-1)
+                    self.fMAC_result_pass_up(self.dim_row - i-1,self.dim_col - j-1)
     
 ####_______________________________________________________________________________________________________________________________________
 #### Function: WS
+#### Functions.py TEST3 (Weight pre-load TEST)
+#### Functions.py TEST4 (Forward WS)
+#### Functions.py TEST5 (Backward WS)
 ####_______________________________________________________________________________________________________________________________________
 
     def preload_Weight_row_by_row(self, row_num, col_num):
-        if row_num>0 and row_num<self.dim_row-1 and col_num >= 0 and col_num<=self.dim_col-1:       #case) fMAC-->fMAC  
+        if row_num>0 and row_num<self.dim_row and col_num >= 0 and col_num<=self.dim_col-1:       #case) fMAC-->fMAC  
             exp, mantissa = self.Unit_array[row_num-1][col_num].get_Weight_from_down()
             self.Unit_array[row_num][col_num].load_Weight_value(exp, mantissa)
         elif row_num==0                         and col_num >= 0 and col_num<=self.dim_col-1:       #case) SRAM-->fMAC (load)
             set = self.bottom_side_entrance[col_num]
             exp = set[0]
-            mantissa = set[1:self.group_size]
+            mantissa = set[1:self.group_size+1]
             self.Unit_array[row_num][col_num].load_Weight_value(exp, mantissa)
-        elif row_num==self.dim_row-1            and col_num >= 0 and col_num<=self.dim_col-1:       #case) SRAM직전 fMAC-->SRAM
-            ####  Nothing TO DO ####                                                                        # SRAM에 값 넣기
-            a=1
         else:
             print("error: function 'fMAC_result_pass_right'")
 
     def Systolic_preload_Weight(self):
+        #### for TEST3
+        ####    array_W = np.full((self.dim_row, self.dim_col),0)
+        
         base_col = int(self.col_fold_current * self.dim_col)
         base_row = int(self.row_fold_current * self.dim_row) 
         ####    이전값 reset
@@ -221,17 +217,27 @@ class Systolic_array():
                 self.Unit_array[i][j].weight_mantissa = np.zeros(self.group_size)
         ####    값 넣기        
         for k in range (self.row_use):
-            temp_input_W = np.ravel(self.Weight_SRAM[base_row + k][base_col: base_col + self.col_use], order='C')
-            input_W = np.pad(temp_input_W, (0,self.dim_col-self.col_use), 'constant', constant_values = 0)
+            temp_input_W = self.Weight_SRAM[base_row + k][base_col: base_col + self.col_use]
+            input_W = temp_input_W
+            padding = np.full((self.group_size+1,), 0)
+            for i in range(self.dim_col-self.col_use):
+                input_W = np.append(input_W, [[padding]], axis = 0)
+            #input_W = np.pad(temp_input_W, (0,self.dim_col-self.col_use), 'constant', constant_values = 0)
             self.bottom_side_entrance = input_W
+            #print("AAA", input_W)
             
             ##count_cycle
             self.cycle +=1 
             ##self.Systolic_Array_1cycle_calculation()
             for a in range(self.dim_row):
                 for b in range(self.dim_col):
-                    self.preload_Weight_row_by_row(a,b)
-    
+                    self.preload_Weight_row_by_row(self.dim_row-a-1,b)
+                
+                ####    for TEST3
+                # for row in range(self.dim_row):
+                #     for col in range(self.dim_col):
+                #         array_W[row][col] = self.Unit_array[row][col].weight_exponant
+                # print(array_W)
             
     ####    1. for Forward WS
     def Systolic_Forward_WS_one_folds(self):
@@ -327,6 +333,7 @@ class Systolic_array():
 
 ####_______________________________________________________________________________________________________________________________________
 #### Function: OS
+####    Functions.py TEST 6
 ####_______________________________________________________________________________________________________________________________________
     def Systolic_Backward_OS_one_folds(self):
         ## expect_cycle은 정확해야 한다.
