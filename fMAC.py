@@ -56,7 +56,7 @@ class fMAC():
     ###########################################################
 
     def fp_generator(self, exp, mantissa):
-        do = 1
+        return exp
    
 
 
@@ -65,19 +65,22 @@ class fMAC():
         if(self.mode == "Forward_WS"):
             exp = self.weight_exponant + self.exponant_from_down
             mantissa = self.weight_mantissa * self.mantissa_from_down
-            result = self.fp_generator(exp, mantissa)
-            self.result_to_right = result
+            result = self.accumulator + self.fp_generator(exp, mantissa.sum(axis=0))
+            test_3 = self.accumulator + self.weight_exponant * self.exponant_from_down
+            self.result_to_right =test_3 # result
 
         elif(self.mode == "Backward_WS"):
             exp = self.weight_exponant + self.exponant_from_left
             mantissa = self.weight_mantissa * self.mantissa_from_left
-            result = self.fp_generator(exp, mantissa)
-            self.result_to_up = result
+            result = self.accumulator+self.fp_generator(exp, mantissa.sum(axis=0))
+            test_3 = self.accumulator + self.weight_exponant * self.exponant_from_left
+            self.result_to_up = test_3 #result
 
         elif(self.mode == "Backward_OS"):
             exp = self.exponant_from_left + self.exponant_from_down
             mantissa = self.mantissa_from_left * self.mantissa_from_down
-            result= self.fp_generator(exp, mantissa)
-            self.accumulator+= result
+            result= self.fp_generator(exp, mantissa.sum(axis=0))
+            test_3 = self.exponant_from_left * self.exponant_from_down
+            self.accumulator+=  test_3#result
 
     

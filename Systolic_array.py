@@ -3,8 +3,8 @@ import math
 from fMAC import fMAC
 
 
-class Systolic_array():
-    def __init__(self, dim_col, dim_row, opUnit, groupsize, mode, Input_A, Input_W, Input_G, target_count, col_total, row_total, num_of_Activation_width, WS_Output_height):
+class Systolic_array():                                                                         ## OS       #fold       #fold       ## WS                   
+    def __init__(self, dim_col, dim_row, opUnit, groupsize, mode, Input_A, Input_W, Input_G, OS_result_shape, col_total, row_total, num_of_Activation_width):
         ####    System information
         self.mode = mode                    #{"Forward_WS", "Backward_WS", "Backward_OS"}
         self.group_size = groupsize         #
@@ -33,19 +33,32 @@ class Systolic_array():
         ####    Process Variable
         self.col_use = self.dim_col
         self.row_use = self.dim_row
+
         self.update_colrow_use_variable()
             ####    for OS type
-        self.target_count = target_count
+        if(self.mode =="Backward_OS"):
+            self.OS_result_height = Input_A.shape[1] #C,H,w
+            self.OS_result_width = Input_G.shape[1]  #N
             ####    for WS type
         self.num_of_Activation_width = num_of_Activation_width
-        self.WS_Output_height = WS_Output_height
 
         ####    trace_변수
         self.cycle = 0              ##count_cycle
         self.util = 0
-        self.temp_result = [] #### TO_DO
-        self.go_result = []
-        self.return_result =[]
+        if(self.mode == "Forward_WS" or self.mode == "Backward_WS"):
+            self.temp_result = np.full((self.dim_col+self.dim_row+self.num_of_Activation_width, max(self.dim_col,self.dim_row)),0) 
+            self.go_result = np.full(((self.num_of_Activation_width, max(self.dim_col,self.dim_row))),0)
+
+        if(self.mode == "Forward_WS"):
+            result_height= Input_A.shape[0] 
+            result_width = Input_W.shape[0]
+        elif (self.mode=="Backward_WS"):
+            result_height= Input_G.shape[0] 
+            result_width = Input_W.shape[1]
+        elif (self.mode=="Backward_OS"):
+            result_height = self.OS_result_height 
+            result_width = self.OS_result_width  
+        self.return_result =np.full((result_height, result_width),0)   #### TO_DO
     
 
         ####    Array에 Unit(fMAC)을 채우고 초기화 // 가로(cols) 세로(rows)
@@ -142,8 +155,8 @@ class Systolic_array():
 
     def fMAC_result_pass_right(self, row_num=0, col_num=0):                                         #result (부분합)
         if row_num>=0 and row_num<=self.dim_row-1   and col_num >= 0 and col_num<self.dim_col-1:          #case) fMAC-->fMAC  
-            result = self.Unit_array[row_num][col_num-1].get_result_to_right()
-            self.Unit_array[row_num][col_num].load_result_on_acc(result)
+            result = self.Unit_array[row_num][col_num].get_result_to_right()
+            self.Unit_array[row_num][col_num+1].load_result_on_acc(result)
         elif row_num>=0 and row_num<=self.dim_row-1 and col_num==self.dim_col-1:                       #case) SRAM직전 fMAC-->SRAM
             ####  TO DO ####                                                                        # SRAM에 값 넣기 SRAM의 base addr//진행에 따라 시작점이 다르므로 pointer를 지정해야하마
             self.right_side_entrance[row_num] = self.Unit_array[row_num][col_num].get_result_to_right()
@@ -152,8 +165,8 @@ class Systolic_array():
 
     def fMAC_result_pass_up(self, row_num=0, col_num=0):
         if row_num>=0 and row_num<self.dim_row-1 and col_num >= 0 and col_num<=self.dim_col-1:       #case) fMAC-->fMAC  
-            result = self.Unit_array[row_num-1][col_num].get_result_to_up()
-            self.Unit_array[row_num][col_num].load_result_on_acc(result)
+            result = self.Unit_array[row_num][col_num].get_result_to_up()
+            self.Unit_array[row_num+1][col_num].load_result_on_acc(result)
         elif row_num==self.dim_row-1            and col_num >= 0 and col_num<=self.dim_col-1:       #case) SRAM직전 fMAC-->SRAM
             ####  TO DO ####                                                                        # SRAM에 값 넣기
             self.up_side_entrance[col_num] = self.Unit_array[row_num][col_num].get_result_to_up()
@@ -221,10 +234,9 @@ class Systolic_array():
             input_W = temp_input_W
             padding = np.full((self.group_size+1,), 0)
             for i in range(self.dim_col-self.col_use):
-                input_W = np.append(input_W, [[padding]], axis = 0)
+                input_W = np.append(input_W, [padding], axis = 0)
             #input_W = np.pad(temp_input_W, (0,self.dim_col-self.col_use), 'constant', constant_values = 0)
             self.bottom_side_entrance = input_W
-            #print("AAA", input_W)
             
             ##count_cycle
             self.cycle +=1 
@@ -241,35 +253,79 @@ class Systolic_array():
             
     ####    1. for Forward WS
     def Systolic_Forward_WS_one_folds(self):
-        ## expect_cycle은 정확해야 한다.
-        expect_cycle = self.dim_col + self.row_use + self.num_of_Activation_width
+        ####    for TEST3
+        array_Flow = np.full((self.dim_row, self.dim_col),0)
+        array_Flow1 = np.full((self.dim_row, self.dim_col),0)
 
         base_col = int(self.col_fold_current * self.dim_col)
         base_row = int(self.row_fold_current * self.dim_row)
-        for i in range (expect_cycle):
+        for i in range (self.num_of_Activation_width):
             ##count_cycle
             self.cycle += 1
-            temp_input_A = np.ravel(self.Data_SRAM[i][base_col: base_col + self.col_use], order='C')
-            input_A = np.pad(temp_input_A, (0,self.dim_col-self.col_use), 'constant', constant_values = 0)
+            temp_input_A = self.Data_SRAM[i][base_col: base_col + self.col_use][:]
+            input_A = np.pad(temp_input_A, ((0,self.dim_col-self.col_use),(0,0)), 'constant', constant_values = 0)
             self.bottom_side_entrance = input_A
             self.Systolic_Array_1cycle_calculation()
             ####    entrance에 저장된 값 result에 저장
-            self.temp_result[i][0:self.dim_row] = self.right_side_entrance[0:self.dim_row]
             
-    ####    2. for Backward WS
-    def Systolic_Backward_WS_one_folds(self):
-        expect_cycle = self.dim_row + self.col_use + self.num_of_Activation_width
-
-        base_col = int(self.col_fold_current * self.dim_col)
-        base_row = int(self.row_fold_current * self.dim_row)
-        for i in range (expect_cycle):
+            self.temp_result[i][0:self.dim_row] = self.right_side_entrance[0:self.dim_row]
+            #### for TEST3
+            for row in range(self.dim_row):
+                for col in range(self.dim_col):
+                    array_Flow[row][col] = self.Unit_array[row][col].exponant_from_down
+                    array_Flow1[row][col] = self.Unit_array[row][col].result_to_right
+            #print("Cycle:" , i)
+            #print(array_Flow)
+            #print(array_Flow1)
+        for i in range (self.dim_col + self.row_use):
             ##count_cycle
             self.cycle += 1
-            temp_input_G = np.ravel(self.Gradient_SRAM[i][base_row: base_row + self.row_use], order='C')
-            input_G = np.pad(temp_input_G, (0,self.dim_row-self.row_use), 'constant', constant_values = 0)
+            self.bottom_side_entrance = np.full((self.dim_col,self.group_size+1),0)
+            self.Systolic_Array_1cycle_calculation()
+            ####    entrance에 저장된 값 result에 저장
+            
+            self.temp_result[i+self.num_of_Activation_width][0:self.dim_row] = self.right_side_entrance[0:self.dim_row]
+            #### for TEST3
+            for row in range(self.dim_row):
+                for col in range(self.dim_col):
+                    array_Flow[row][col] = self.Unit_array[row][col].exponant_from_down
+            #print("Cycle:!!" , i+self.num_of_Activation_width)
+            #print(array_Flow)
+
+
+    ####    2. for Backward WS
+    def Systolic_Backward_WS_one_folds(self):
+        ####    for TEST3
+        array_Flow = np.full((self.dim_row, self.dim_col),0)
+        base_col = int(self.col_fold_current * self.dim_col)
+        base_row = int(self.row_fold_current * self.dim_row)
+        for i in range (self.num_of_Activation_width):
+            ##count_cycle
+            self.cycle += 1
+            temp_input_G = self.Gradient_SRAM[i][base_row: base_row + self.row_use][:]
+            input_G = np.pad(temp_input_G, ((0,self.dim_row-self.row_use),(0,0)), 'constant', constant_values = 0)
             self.left_side_entrance = input_G
             self.Systolic_Array_1cycle_calculation()
-            self.temp_result[i][0:self.col] = self.right_side_entrance[0:self.dim_col]
+            self.temp_result[i][0:self.dim_col] = self.up_side_entrance[0:self.dim_col]
+            #### for TEST3
+            for row in range(self.dim_row):
+                for col in range(self.dim_col):
+                    array_Flow[row][col] = self.Unit_array[row][col].exponant_from_left
+            #print("Cycle:" , i)
+            #print(array_Flow)
+
+        for i in range (self.dim_row + self.col_use):
+            ##count_cycle
+            self.cycle += 1
+            self.left_side_entrance = np.full((self.dim_row,self.group_size+1),0)
+            self.Systolic_Array_1cycle_calculation()
+            self.temp_result[i+self.num_of_Activation_width][0:self.dim_col] = self.up_side_entrance[0:self.dim_col]
+            #### for TEST3
+            for row in range(self.dim_row):
+                for col in range(self.dim_col):
+                    array_Flow[row][col] = self.Unit_array[row][col].exponant_from_left
+            #print("Cycle:!!" , i+self.num_of_Activation_width)
+            #print(array_Flow)
 
 
     ######################
@@ -277,14 +333,14 @@ class Systolic_array():
     ####    1. for Forward WS
     def make_square_Forward_WS_result(self):
         base_col = self.dim_col
-        for i in range(self.WS_Output_height):
+        for i in range(self.num_of_Activation_width):
             for j in range(self.row_use):
                 self.go_result[i][j] = self.temp_result[base_col + i + j][j]
 
     ####    2. for Backward WS
     def make_square_Backward_WS_result(self):
         base_row = self.dim_row
-        for i in range(self.WS_Output_height):
+        for i in range(self.num_of_Activation_width):
             for j in range(self.col_use):
                 self.go_result[i][j] = self.temp_result[base_row + i + j][j]
 
@@ -294,12 +350,12 @@ class Systolic_array():
     ####    1. for Forward WS
     def store_Forward_WS_result(self):
         base_row = self.row_fold_current * self.dim_row 
-        self.return_result[:][base_row : base_row + self.row_use] += self.go_result[:][0:self.row_use]
+        self.return_result[0:self.num_of_Activation_width , base_row : base_row + self.row_use] += self.go_result[0:self.num_of_Activation_width , 0:self.row_use]
     
     ####    2. for Backward WS
     def store_Backward_WS_result(self):
         base_col = self.col_fold_current * self.dim_col 
-        self.return_result[:][base_col : base_col + self.col_use] += self.go_result[:][0:self.col_use]
+        self.return_result[0:self.num_of_Activation_width , base_col : base_col + self.col_use] += self.go_result[0:self.num_of_Activation_width , 0:self.col_use]
 
 
 
@@ -317,7 +373,7 @@ class Systolic_array():
 
     ######################
     ####    2. for Backward WS
-    def Forward_WS_Calculation(self):
+    def Backward_WS_Calculation(self):
         while True:
             self.Systolic_preload_Weight()
             self.Systolic_Backward_WS_one_folds()
@@ -337,29 +393,40 @@ class Systolic_array():
 ####_______________________________________________________________________________________________________________________________________
     def Systolic_Backward_OS_one_folds(self):
         ## expect_cycle은 정확해야 한다.
-        expect_cycle =1 #### TO_DO 
+        expect_cycle = self.Gradient_SRAM.shape[0] #### TO_DO 
         base_col = int(self.col_fold_current * self.dim_col)
         base_row = int(self.row_fold_current * self.dim_row)
         
         for i in range (expect_cycle):
-            temp_input_A = np.ravel(self.Data_SRAM[i][base_col: base_col + self.col_use], order='C')
-            input_A = np.pad(temp_input_A, (0,self.dim_col-self.col_use), 'constant', constant_values = 0)
-            self.bottom_side_entrance = input_A
+            ## cycle count
+            self.cycle += 1
 
-            temp_input_G = np.ravel(self.Gradient_SRAM[i][base_row: base_row + self.row_use], order='C')
-            input_G = np.pad(temp_input_G, (0,self.dim_row-self.row_use),'constant', constant_values = 0 )
+            temp_input_A = self.Data_SRAM[i][base_col: base_col + self.col_use][:]
+            input_A = np.pad(temp_input_A, ((0,self.dim_col-self.col_use),(0,0)), 'constant', constant_values = 0)
+            self.bottom_side_entrance = input_A
+            temp_input_G = self.Gradient_SRAM[i][base_row: base_row + self.row_use][:]
+            input_G = np.pad(temp_input_G, ((0,self.dim_row-self.row_use),(0,0)), 'constant', constant_values = 0 )
             self.left_side_entrance = input_G
 
+
             self.Systolic_Array_1cycle_calculation()
+        for i in range (self.dim_row + self.dim_col):
+            ##cycle count
+            self.cycle += 1
+
+            self.left_side_entrance = np.full((self.dim_row, self.group_size + 1),0)
+            self.bottom_side_entrance = np.full((self.dim_col, self.group_size + 1),0)
+            self.Systolic_Array_1cycle_calculation()
+
     
     def store_OS_result(self):
         base_col_addr = int(self.col_fold_current * self.dim_col)
         base_row_addr = int(self.row_fold_current * self.dim_row)
         ##fold에 따라 해당 sram에 저장 (여러 사이클걸린다. 한줄씩 뺴야함.)
-        #### TO_DO
-        for i in range(self.dim_row):
-           for j in range(self.dim_col):
-               self.return_result[base_row_addr + j][base_col_addr + i] = self.Unit_array[i][j].accumulator
+        for i in range(self.row_use):
+            self.cycle += 1
+            for j in range(self.col_use):
+               self.return_result[base_col_addr + j][base_row_addr + i] = self.Unit_array[i][j].accumulator
                self.Unit_array[i][j].accumulator = 0
        
     def Backward_OS_Calculation(self):
