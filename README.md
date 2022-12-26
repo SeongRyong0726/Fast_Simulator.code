@@ -1,12 +1,16 @@
 Fast_simulator.code
 ====================
-1. Input
-> ###### Activation(Width ,Hight, channel, B) (현재까진 B=1)
-> ###### Weight(Width, Hight, channel, num_filt)
-> ###### True_Output (Width, Hight, Channel, B)     
-2. Output
-> ###### 3가지 연산의 결과 (Output, Gradient_Activation, Gradient_Weight)
-3. Simulator Overview
-> ###### Froward_WS = Activation(+padding) --> precision_decision <A,W> --(im2col)--> Systolic_Class(시뮬레이션) --> 결과(Output) --> Gradient_Output 계산 (Output - True_Output) 
-> ###### Backward WS = Gradient_Output(+padding) -->  precision_decision <G_O,W> --(im2col)--> Systolic_Class(시뮬레이션) --> 결과(Gradient_Activation)
-> ###### Backward OS = Activation_T(+padding) --> precision_decision <A_T, G_O> --(im2col)--> Systolic_Class(시뮬레이션) --> 결과(Gradient_Weight)
+TO run the code.
+<run_sim.py> : this is start from 4D fp array. caculation is only for fp not BFP, yet.
+
+1. write "python run_sim.py" on cmd
+2. write one of "Backward_OS", "Forward_WS", or "Backward_WS" which you want
+3. done
+
+<run_sim_cycle.py> : this is for get cycle of one layer caculation. TO run this. you need files @ see run_sim_cycle.py#L56
+this simulation is start from 2D GEMM input.
+
+1. write "python run_sim_cycle.py" on cmd
+2. if "right file set + right path", it may run 
+3. done (get cycle)
+
